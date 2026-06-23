@@ -5,13 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>悟理学吧 · 智慧答题大厅（AI智能评价版）</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='80' text-anchor='middle' font-size='80' fill='%232f6b4d'%3E🚪%3C/text%3E%3C/svg%3E">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="mammoth.browser.min.js">
+    </script>
+    <link rel="stylesheet" href="viewer.min.css">
+    <script src="viewer.min.js">
+    </script>
+    <script src="html2canvas.min.js">
+    </script>
+    <script src="html2pdf.bundle.min.js">
+    </script>
+    <script src="jspdf.umd.min.js">
+    </script>
+    <script src="chart.umd.min.js">
+    </script>
     <style>
         /* ========== 原始样式保持不变 ========== */
         * {
@@ -3842,7 +3848,7 @@ background: white;
         <div style="margin-bottom: 12px;">
             <label style="color: #5a3a1a; font-size: 0.85rem; display: block; margin-bottom: 6px; font-weight: 600;">QuickForm 接口地址</label>
             <input type="text" id="apiUrlInput" style="width: 100%; padding: 10px; border: 2px solid #c3a16b; border-radius: 20px; font-size: 0.85rem; outline: none;" placeholder="https://quickform.cn/api/xxxxxxxxxx">
-            <div style="font-size: 0.7rem; color: #8b5a2b; margin-top: 4px;">默认地址：https://quickform.cn/api/2qta3a2nix</div>
+            <div style="font-size: 0.7rem; color: #8b5a2b; margin-top: 4px;">默认地址：https://quickform.cn/api/uad2rwcjdz</div>
         </div>
         <div id="apiSettingsStatus" style="font-size: 0.8rem; color: #6b5a4b; margin-bottom: 12px; text-align: center;"></div>
         <div style="display: flex; gap: 8px; justify-content: center;">
@@ -4149,37 +4155,15 @@ background: white;
 
         function handleCompetitionTimeout() {
             if (!competitionMode) return;
+        
+            // 如果答题面板开着，标记当前门为“未完成”（超时未提交，不计成绩）
             if (quizPanel.classList.contains('active') && currentDoorId) {
-                const q = questions[currentDoorId-1];
-                if (q) {
-                    if ((q.type === 'choice' && selectedOption !== null) ||
-                        (q.type === 'fill' && fillAnswerInput.value.trim() !== '')) {
-                        let isCorrect = false;
-                        let userAnswerText = '';
-                        let correctAnswerText = '';
-                        if (q.type === 'choice') {
-                            const answerLetter = q.answer.toUpperCase().charAt(0);
-                            const answerIndex = 'ABCD'.indexOf(answerLetter);
-                            isCorrect = (selectedOption === answerIndex);
-                            const selectedOptionContent = q.options[selectedOption] || '';
-                            userAnswerText = String.fromCharCode(65 + selectedOption) + '. ' + selectedOptionContent;
-                            correctAnswerText = `${answerLetter}. ${q.options[answerIndex] || ''}`;
-                        } else {
-                            const userAnswer = fillAnswerInput.value.trim();
-                            userAnswerText = userAnswer;
-                            correctAnswerText = q.answer;
-                            if (caseSensitive) {
-                                isCorrect = (userAnswer === q.answer);
-                            } else {
-                                isCorrect = (userAnswer.toLowerCase() === q.answer.toLowerCase());
-                            }
-                        }
-                        recordAnswer(currentDoorId, isCorrect, q.type === 'choice' ? q.question : q.questionText, userAnswerText, correctAnswerText, q.explanation);
-                        localStorage.setItem(`door_${currentDoorId}`, 'opened');
-                        localStorage.removeItem(`door_${currentDoorId}_incomplete`);
-                    }
-                }
+                localStorage.setItem(`door_${currentDoorId}_incomplete`, 'true');
+                const doorCard = document.querySelector(`.door-card[data-door="${currentDoorId}"]`);
+                if (doorCard) doorCard.classList.add('incomplete');
             }
+        
+            // 直接结束竞赛，不记录当前题目，不调用 recordAnswer 和上报
             finishCompetition(false);
         }
 
@@ -5680,7 +5664,7 @@ userAnswerText = String.fromCharCode(65 + selectedOption) + '. ' + selectedOptio
         let wlxbCurrentUser = null;
         let wlxbLoginMode = null;
         let wlxbIsLoggedIn = false;
-        const DEFAULT_API_BASE = 'https://quickform.cn/api/2qta3a2nix';
+        const DEFAULT_API_BASE = 'https://quickform.cn/api/uad2rwcjdz';
         function getApiBase() {
             const saved = localStorage.getItem('wulixueba_quickform_api');
             return saved || DEFAULT_API_BASE;
@@ -6004,11 +5988,11 @@ for (let i = 1; i <= maxDoor; i++) {
             } catch (error) { return false; }
         }
 
-        window.wlxbReportSingleQuestion = async function(doorId, isCorrect, questionText, userAnswer, correctAnswer, timeSpent) {
+        window.wlxbReportSingleQuestion = async function(doorId, isCorrect, questionText, userAnswer, correctAnswer, timeSpent, mode = 'practice') {
             if (wlxbLoginMode === 'guest') return;
             const sessionId = sessionStorage.getItem('wulixueba_session') || (() => { const id = Date.now() + '_' + Math.random().toString(36).substr(2, 8); sessionStorage.setItem('wulixueba_session', id); return id; })();
             await wlxbReportToQuickForm({
-                mode: 'practice',
+                mode: mode,
                 student_name: wlxbCurrentUser?.name || '未知',
                 class_name: wlxbCurrentUser?.classFull || '未知',
                 stage: wlxbCurrentUser?.stage || '',
@@ -6182,7 +6166,12 @@ for (let i = 1; i <= maxDoor; i++) {
             window._wlxbCompetitionInjected = true;
             const originalFinishCompetition = finishCompetition;
             window.finishCompetition = function(isCompleted, timeUpMessage) {
-                if (wlxbLoginMode !== 'guest') { const stats = typeof calculateStats === 'function' ? calculateStats() : { total:0, correct:0, wrong:0, correctRate:0, usedSeconds:0 }; const wrongList = typeof answerRecords !== 'undefined' ? answerRecords.filter(r => !r.isCorrect) : []; window.wlxbReportCompetitionResult(stats, wrongList); }
+                // 竞赛模式下不再额外上报汇总数据，因为单题上报已经记录
+                if (wlxbLoginMode !== 'guest' && typeof competitionMode !== 'undefined' && !competitionMode) {
+                    const stats = typeof calculateStats === 'function' ? calculateStats() : { total:0, correct:0, wrong:0, correctRate:0, usedSeconds:0 };
+                    const wrongList = typeof answerRecords !== 'undefined' ? answerRecords.filter(r => !r.isCorrect) : [];
+                    window.wlxbReportCompetitionResult(stats, wrongList);
+                }
                 return originalFinishCompetition(isCompleted, timeUpMessage);
             };
         }
@@ -6198,14 +6187,18 @@ for (let i = 1; i <= maxDoor; i++) {
                         const timeSpent = window._questionStartTime ? Math.round((Date.now() - window._questionStartTime) / 1000) : 0;
                         const records = window._answerRecords || [];
                         const lastRecord = records.length > 0 ? records[records.length-1] : null;
-                        if (lastRecord && lastRecord.doorId === doorId && typeof competitionMode === 'undefined' || !competitionMode) {
+                        if (lastRecord && lastRecord.doorId === doorId) {
+                            // 通过计时条是否可见判断是否为竞赛模式
+                            const isCompetitionMode = document.getElementById('competitionTimerBar').classList.contains('show');
+                            const reportMode = isCompetitionMode ? 'competition' : 'practice';
                             window.wlxbReportSingleQuestion(
                                 doorId,
                                 lastRecord.isCorrect,
                                 q.type === 'choice' ? q.question : q.questionText,
                                 lastRecord.userAnswer,
                                 lastRecord.correctAnswer,
-                                timeSpent
+                                timeSpent,
+                                reportMode
                             );
                         }
                     }
@@ -6413,7 +6406,7 @@ for (let i = 1; i <= maxDoor; i++) {
 	    if (resetApiBtn) {
 	        resetApiBtn.addEventListener('click', function() {
 	            localStorage.removeItem('wulixueba_quickform_api');
-	            if (apiUrlInput) apiUrlInput.value = 'https://quickform.cn/api/2qta3a2nix';
+	            if (apiUrlInput) apiUrlInput.value = 'https://quickform.cn/api/uad2rwcjdz';
 	            if (apiSettingsStatus) apiSettingsStatus.innerHTML = '<span style="color:#2f6b4d;">✅ 已重置为默认地址</span>';
 	            setTimeout(function() { apiSettingsOverlay.style.display = 'none'; }, 1500);
 	        });
